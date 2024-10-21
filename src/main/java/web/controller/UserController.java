@@ -1,39 +1,69 @@
 package web.controller;
 
+import web.model.User;
+import web.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import web.model.User;
-import web.service.UserService;
-
-import java.util.Optional;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import javax.validation.Valid;
 
 @Controller
 public class UserController {
+    private final UserService userService;
 
-    @Autowired
-    private UserService userService;
+    @Autowired()
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
-    @GetMapping("/users")
-    public String showUsers(@RequestParam(value = "count") Optional<Integer> count, Model model) {
-        model.addAttribute("users", userService.getUsers(count.orElse(0)));
+    @GetMapping("/")
+    public String users(Model model) {
+        model.addAttribute("users", userService.getAllUsers());
         return "users";
     }
 
+    @GetMapping("/{id}")
+    public String getUser (@PathVariable("id") long id, Model model) {
+        model.addAttribute("user", userService.getUserById(id));
+        return "user";
+    }
 
-    @PostMapping
-    public String create(@RequestParam("name") String name, @RequestParam("age") int age, Model model){
+    @GetMapping("/new")
+    public String addUser(User user) {
+        return "create";
+    }
 
-        User user = new User();
-        user.setName(name);
-        user.setAge(age);
+    @PostMapping("/new")
+    public String add(@ModelAttribute("user") @Valid User user, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return "create";
+        } else {
+            userService.addUser(user);
+            return "redirect:/";
+        }
+    }
 
-        //дальше надо добавить юзера в БД
+    @DeleteMapping("/delete/{id}")
+    public String delete(@PathVariable("id") long id) {
+        userService.removeUser(id);
+        return "redirect:/";
+    }
 
-        model.addAttribute("user", user);
-        return "succesPage";
+    @GetMapping("edit/{id}")
+    public String updateUser(@PathVariable("id") long id, Model model) {
+        model.addAttribute(userService.getUserById(id));
+        return "edit";
+    }
+
+    @PatchMapping("/edit")
+    public String update(@Valid User user, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return "edit";
+        } else {
+            userService.updateUser(user);
+            return "redirect:/";
+        }
     }
 }
